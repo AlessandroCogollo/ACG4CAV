@@ -1,0 +1,28 @@
+# TODO: EDIT THIS
+
+run:
+  name: dev_poc
+  seed: 42
+  out_dir: runs
+
+data:
+  images_dir: data/images
+  concepts_file: configs/concepts.yaml
+
+grounding:
+  model: groundingdino
+  box_threshold: 0.30
+  text_threshold: 0.25
+  topk_per_image: 3
+
+segmentation:
+  model: sam
+  crop_policy: mask_tight   # or box_tight
+  padding_ratio: 0.10
+
+filtering:
+  min_area_ratio: 0.01
+  max_area_ratio: 0.80
+  dedup:
+    enabled: true
+    cosine_threshold: 0.98

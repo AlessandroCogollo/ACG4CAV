@@ -1,0 +1,4 @@
+# TODO: Edit this
+concepts:
+  - name: zebra
+    prompts: ["zebra", "horse with stripes"]
