@@ -1,5 +1,3 @@
-# TODO: EDIT THIS
-
 run:
   name: dev_poc
   seed: 42
@@ -8,16 +6,23 @@ run:
 data:
   images_dir: data/images
   concepts_file: configs/concepts.yaml
+  cache_dir: data/cache
 
 grounding:
   model: groundingdino
+  hf_model_id: "IDEA-Research/grounding-dino-tiny"
   box_threshold: 0.30
   text_threshold: 0.25
   topk_per_image: 3
 
+cropping:
+  enabled: true
+  method: bbox
+  padding_ratio: 0.10
+
 segmentation:
   model: sam
-  crop_policy: mask_tight   # or box_tight
+  crop_policy: mask_tight
   padding_ratio: 0.10
 
 filtering:

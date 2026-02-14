@@ -1,9 +1,12 @@
 ### Adaptation of this original code: https://github.com/DataSciencePolimi/Visual-TCAV/blob/main/datasets_and_models_downloader/datasets_and_models_downloader.py
 ### Downloads a set of images from ImageNet for a set of classes, and saves them in the ACG4CAV data folder. The number of images per class can be set by the user, as well as the option to download random images or not. The code also extracts one image per class and saves it in the ACG4CAV data folder with the class name as filename, to be used as single image for testing.
 
+# BUGFIX: removed invalid/unused import that can break execution depending on keras version
+# from keras.src.backend.common.name_scope import current_path
+
 # Imports
 if __name__ == "__main__":
-	# import os
+	import os
 	import random
 	import requests
 	import json
@@ -27,10 +30,11 @@ imagenet_classes = [
 # Paths
 from os import path, listdir, makedirs, remove
 
-acg4cav_path = r"../../../"
+acg4cav_path = r"C:\Users\cogol\PycharmProjects\ACG4CAV"
 
 acg4cav_data_path = path.join(acg4cav_path, "data")
 acg4cav_images_path = path.join(acg4cav_data_path, "images")
+acg4cav_negatives_path = path.join(acg4cav_data_path, "negatives")
 
 imagenet_class_info_file = path.join(acg4cav_data_path, "imagenet_class_info.json")
 
@@ -38,6 +42,8 @@ if __name__ == "__main__":
 	print("Creating folders...", end=' ')
 
 	makedirs(acg4cav_images_path, exist_ok=True)
+	# BUGFIX: ensure negatives folder exists before saving
+	makedirs(acg4cav_negatives_path, exist_ok=True)
 
 	print("Done!")
 
@@ -56,16 +62,15 @@ def get_image_name(url):
 
 
 def get_image(url):
-	if not url.lower().endswith(".jpg") and not url.lower().endswith(".jpeg"):
-		return False
+
 	try:
 		import requests
-		img_resp = requests.get(url, timeout=(3, 3), headers=headers)
+		img_resp = requests.get(url, timeout=(5, 15), headers=headers, allow_redirects=True)
 	except:
 		return False
 	if not 'content-type' in img_resp.headers:
 		return False
-	if not 'image' in img_resp.headers['content-type']:
+	if not 'image' in img_resp.headers['content-type'].lower():
 		return False
 	if (len(img_resp.content) < 1000):
 		return False
@@ -79,8 +84,10 @@ def get_image_from_url(url, img_file_path, n):
 	img_resp = get_image(url)
 	if not img_resp:
 		return False
+	from os import path, makedirs
+	makedirs(img_file_path, exist_ok=True)
+
 	img_name = str(n) + ".jpg"
-	from os import path
 	with open(path.join(img_file_path, img_name), 'wb') as img_f:
 		img_f.write(img_resp.content)
 	return True
@@ -132,16 +139,32 @@ if __name__ == "__main__":
 		to_export = random.choice([dir for dir in listdir(img_file_path) if dir.endswith(".jpg")])
 		import shutil
 
-		shutil.copyfile(path.join(img_file_path, file), path.join(acg4cav_images_path,
-																  class_info_dict[imagenet_class][
-																	  "class_name"] + ".jpg"))
+		# BUGFIX: you were copying `file` (last loop var), should copy `to_export`
+		shutil.copyfile(
+			path.join(img_file_path, to_export),
+			path.join(acg4cav_images_path, class_info_dict[imagenet_class]["class_name"] + ".jpg")
+		)
+
+	print("\nDownloading random/negative images... this may take a while...", end=' ')
+
+	'''
+
+	makedirs(acg4cav_negatives_path, exist_ok=True)
 
 	for i in range(n_random_images):
 		random_class = random.choice(imagenet_classes)
 		response = requests.get(url_to_scrape(random_class), headers=headers)
 		try:
-			urls_to_scrape = np.array([url.decode('utf-8') for url in response.content.splitlines()])
+			# response.content splitlines are bytes -> decode
+			urls_to_scrape = np.array([url.decode('utf-8') for url in response.content.splitlines() if url.strip()])
 		except:
 			break
+		if len(urls_to_scrape) == 0:
+			continue
 		random_url = random.choice(urls_to_scrape)
-		get_image_from_url(random_url, acg4cav_images_path, "negatives")
+
+		get_image_from_url(random_url, acg4cav_negatives_path, i)
+		
+	'''
+
+	print("Done!")
