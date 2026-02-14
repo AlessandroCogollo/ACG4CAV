@@ -27,7 +27,7 @@ imagenet_classes = [
 # Paths
 from os import path, listdir, makedirs, remove
 
-acg4cav_path = r"C:\Users\cogol\PycharmProjects\ACG4CAV"
+acg4cav_path = r"/"
 
 acg4cav_data_path = path.join(acg4cav_path, "data")
 acg4cav_images_path = path.join(acg4cav_data_path, "images")

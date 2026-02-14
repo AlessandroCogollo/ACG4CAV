@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import json
-import math
 from dataclasses import dataclass
 from typing import Optional, Tuple, Dict, List
 
@@ -276,49 +275,13 @@ def process_folder(
         # keep same extension; safe for jpg/png/webp
         cropped.save(out_path)
 
-# -------------------------
-# CLI
-# -------------------------
-
 def main():
-    import argparse
-
-    ap = argparse.ArgumentParser("Dataset cropper")
-    ap.add_argument("--in_root", required=True)
-    ap.add_argument("--out_root", required=True)
-    ap.add_argument("--mode", choices=["center", "random", "bbox", "saliency"], default="center")
-    ap.add_argument("--out_size", type=int, default=224)
-
-    ap.add_argument("--random_min", type=float, default=0.6)
-    ap.add_argument("--random_max", type=float, default=1.0)
-
-    ap.add_argument("--bbox_json", type=str, default=None)
-    ap.add_argument("--bbox_padding", type=float, default=0.1)
-
-    ap.add_argument("--saliency_root", type=str, default=None)
-    ap.add_argument("--saliency_crop_frac", type=float, default=0.6)
-    ap.add_argument("--saliency_smoothing", type=int, default=0)
-
-    ap.add_argument("--seed", type=int, default=None)
-
-    args = ap.parse_args()
-
-    cfg = CropConfig(
-        mode=args.mode,
-        out_size=args.out_size,
-        random_scale=(args.random_min, args.random_max),
-        bbox_padding=args.bbox_padding,
-        saliency_crop_frac=args.saliency_crop_frac,
-        saliency_smoothing=args.saliency_smoothing,
-    )
+    cfg = CropConfig(mode="center", out_size=224)
 
     process_folder(
-        in_root=args.in_root,
-        out_root=args.out_root,
-        cfg=cfg,
-        bbox_json=args.bbox_json,
-        saliency_root=args.saliency_root,
-        seed=args.seed,
+        in_root="../images/zebra",
+        out_root="../crops",
+        cfg=cfg
     )
 
 if __name__ == "__main__":
