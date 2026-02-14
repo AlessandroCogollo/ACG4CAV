@@ -19,7 +19,7 @@ headers = {
 random_download = False
 n_images_per_class = 50
 n_single_images_per_class = 2
-n_random_images = 200
+n_random_images = 50
 imagenet_classes = [
 	"n02391049",  # Zebra
 ]
@@ -27,7 +27,7 @@ imagenet_classes = [
 # Paths
 from os import path, listdir, makedirs, remove
 
-acg4cav_path = r"/"
+acg4cav_path = r"../../../"
 
 acg4cav_data_path = path.join(acg4cav_path, "data")
 acg4cav_images_path = path.join(acg4cav_data_path, "images")
@@ -135,3 +135,13 @@ if __name__ == "__main__":
 		shutil.copyfile(path.join(img_file_path, file), path.join(acg4cav_images_path,
 																  class_info_dict[imagenet_class][
 																	  "class_name"] + ".jpg"))
+
+	for i in range(n_random_images):
+		random_class = random.choice(imagenet_classes)
+		response = requests.get(url_to_scrape(random_class), headers=headers)
+		try:
+			urls_to_scrape = np.array([url.decode('utf-8') for url in response.content.splitlines()])
+		except:
+			break
+		random_url = random.choice(urls_to_scrape)
+		get_image_from_url(random_url, acg4cav_images_path, "negatives")
