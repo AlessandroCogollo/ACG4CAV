@@ -5,8 +5,11 @@ run:
 
 data:
   images_dir: data/images
+  crops_dir: data/crops
   concepts_file: configs/concepts.yaml
   cache_dir: data/cache
+  base_model: "ResNet50V2"
+  layer_name: stages.3.blocks.2.conv3
 
 grounding:
   model: groundingdino
@@ -20,14 +23,15 @@ cropping:
   method: bbox
   padding_ratio: 0.10
 
-segmentation:
-  model: sam
-  crop_policy: mask_tight
-  padding_ratio: 0.10
-
 filtering:
+  enabled: true
+  method: default
   min_area_ratio: 0.01
   max_area_ratio: 0.80
   dedup:
     enabled: true
     cosine_threshold: 0.98
+
+similarity:
+  method: cosine
+  threshold: 0.80

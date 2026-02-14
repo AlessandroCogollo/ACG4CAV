@@ -275,6 +275,32 @@ def process_folder(
         # keep same extension; safe for jpg/png/webp
         cropped.save(out_path)
 
+@dataclass
+class CropperConfig:
+    mode: str                 # "center" | "random" | "bbox" | "saliency"
+    out_size: int = 224
+    random_scale: Tuple[float, float] = (0.6, 1.0)
+    bbox_padding: float = 0.1
+    saliency_crop_frac: float = 0.6
+    saliency_smoothing: int = 0
+
+class Cropper:
+    def __init__(self, cfg: CropConfig, bbox_json: Optional[str] = None, saliency_root: Optional[str] = None, seed: Optional[int] = None):
+        self.cfg = cfg
+        self.bbox_json = bbox_json
+        self.saliency_root = saliency_root
+        self.seed = seed
+
+    def process_folder(self, in_root: str, out_root: str) -> None:
+        process_folder(
+            in_root=in_root,
+            out_root=out_root,
+            cfg=self.cfg,
+            bbox_json=self.bbox_json,
+            saliency_root=self.saliency_root,
+            seed=self.seed,
+        )
+
 def main():
     cfg = CropConfig(mode="center", out_size=224)
 
