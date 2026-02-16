@@ -57,9 +57,20 @@ class Grounder:
         self.processor = AutoProcessor.from_pretrained(
             self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
         )
-        self.model = GroundingDinoForObjectDetection.from_pretrained(
-            self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
-        ).to(self.device)
+
+        if self.cfg.model_id == "IDEA-Research/grounding-dino-tiny":
+            print("Using tiny model")
+            self.model = GroundingDinoForObjectDetection.from_pretrained(
+                self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
+            ).to(self.device)
+        elif self.cfg.model_id == "IDEA-Research/grounding-dino-base":
+            print("Using base model")
+            self.model = GroundingDinoForObjectDetection.from_pretrained(
+                self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
+            ).to(self.device)
+        else:
+            raise ValueError(f"Unsupported model_id: {self.cfg.model_id}")
+
         self.model.eval()
 
     def predict(self, image: Image.Image, text_query: Optional[str] = None):

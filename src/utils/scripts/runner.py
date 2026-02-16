@@ -74,7 +74,7 @@ def main():
 		if configs["cropping"]["enabled"] is True:
 			print("Cropping images...")
 			cropper = Cropper(CropConfig(mode=configs["cropping"]["method"], out_size=224), bbox_json=bboxes, saliency_root=None, seed=configs["run"]["seed"])
-			cropper.process_folder(str(Path.joinpath(img_dir, concept["name"])), str(Path.joinpath(img_dir, "crops", concept["name"])))
+			cropper.process_folder(str(Path.joinpath(img_dir, concept["name"])), str(Path.joinpath(crops_dir, concept["name"])))
 
 		if configs["filtering"]["enabled"] is True:
 			print("Filtering images...")

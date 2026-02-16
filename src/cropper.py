@@ -105,7 +105,7 @@ def bbox_crop(
 
     bw = max(1.0, x2 - x1)
     bh = max(1.0, y2 - y1)
-    side = max(bw, bh) * (1.0 + padding)
+    side = max(bw, bh) * (1.0 - padding)
 
     cx = x1 + bw / 2.0
     cy = y1 + bh / 2.0
@@ -178,7 +178,7 @@ class CropConfig:
     mode: str                 # "center" | "random" | "bbox" | "saliency"
     out_size: int = 224
     random_scale: Tuple[float, float] = (0.6, 1.0)
-    bbox_padding: float = 0.1
+    bbox_padding: float = 0.3
     saliency_crop_frac: float = 0.6
     saliency_smoothing: int = 0
 
@@ -280,7 +280,7 @@ class CropperConfig:
     mode: str                 # "center" | "random" | "bbox" | "saliency"
     out_size: int = 224
     random_scale: Tuple[float, float] = (0.6, 1.0)
-    bbox_padding: float = 0.1
+    bbox_padding: float = 0.3
     saliency_crop_frac: float = 0.6
     saliency_smoothing: int = 0
 
