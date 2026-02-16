@@ -5,7 +5,7 @@ import numpy as np
 import torch
 import yaml
 
-from CAVtrainer import save_cav, compute_cav
+from CAVtrainer import CAVtrainer, CAVConfig
 from cropper import Cropper, CropConfig
 from filterer import Filterer, FiltererConfig
 from grounder import Grounder, GrounderConfig
@@ -13,7 +13,6 @@ from similarities import Similarities, SimilaritiesConfig
 from utils.activations import extract_activations
 from utils.logger.logger import ExperimentLogger
 from utils.modelloader import load_hf_timm_model_from_folder
-from CAVtrainer import CAVtrainer, CAVConfig
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 base_path = Path(__file__).resolve().parents[3]
@@ -21,9 +20,7 @@ model_path = Path.joinpath(base_path, "data/models")
 
 def main():
 	# LOADING CONFIG FILES
-	device = "cuda" if torch.cuda.is_available() else "cpu"
-
-	print("Reading Config File...\n")
+	print("Reading Config File...")
 	with open(Path.joinpath(base_path, "configs", "dev.yaml"), 'r') as configs_file:
 		configs = yaml.safe_load(configs_file)
 
@@ -54,9 +51,6 @@ def main():
 
 	print("Initializing Base Model...")
 
-	if not Path.joinpath(model_path, model_name).exists():
-		raise FileNotFoundError(f"Model folder not found: {Path.joinpath(model_path, model_name)}")
-
 	makedirs(Path.joinpath(model_path, model_name), exist_ok=True)
 	model = load_hf_timm_model_from_folder(str(Path.joinpath(model_path, model_name)), model_name, device=None)
 
@@ -64,25 +58,43 @@ def main():
 	# for name, _ in model.named_modules():
 	#	print(name)
 
-	print("Initializing Grounder...\n")
+	print("Initializing Grounder...")
 	grounder = Grounder(GrounderConfig(model_id=grounder_hf_id, cache_dir=cache_dir), device=device)
 
-	print("Reading concepts...\n")
+	print("Reading concepts...")
 	for concept in concepts["concepts"]:
-		bboxes = grounder.run_on_images_in_dir(Path.joinpath(img_dir, concept["name"]), concept["name"])
+		concept_img_dir = Path.joinpath(img_dir, concept["name"])
+
+		# Save bbox JSON inside runs/ (keeps experiment artifacts together)
+		bbox_json_path = Path.joinpath(runs_root, "bboxes", f"{concept['name']}.json")
+
+		bboxes = grounder.run_on_images_in_dir(
+			concept_img_dir,
+			concept["name"],
+			out_json_path=bbox_json_path,
+			verbose=True,
+		)
 
 		if configs["cropping"]["enabled"] is True:
 			print("Cropping images...")
-			cropper = Cropper(CropConfig(mode=configs["cropping"]["method"], out_size=224), bbox_json=bboxes, saliency_root=None, seed=configs["run"]["seed"])
-			cropper.process_folder(str(Path.joinpath(img_dir, concept["name"])), str(Path.joinpath(crops_dir, concept["name"])))
+			cropper = Cropper(
+				CropConfig(mode=configs["cropping"]["method"], out_size=224),
+				bbox_json=str(bboxes) if bboxes is not None else None,
+				saliency_root=None,
+				seed=configs["run"]["seed"],
+			)
+			cropper.process_folder(
+				str(concept_img_dir),
+				str(Path.joinpath(crops_dir, concept["name"])),
+			)
 
 		if configs["filtering"]["enabled"] is True:
 			print("Filtering images...")
 			filterer = Filterer(FiltererConfig(method=configs["filtering"]["method"]))
-			filterer.process_folder(str(Path.joinpath(img_dir, "crops", concept["name"])), str(Path.joinpath(img_dir, "filtered", concept["name"])))
+			filterer.process_folder(str(Path.joinpath(crops_dir,concept["name"])), str(Path.joinpath(img_dir, "filtered", concept["name"])))
 
 		dataset_stats = {
-			"n_concept_images": len([x for x in Path.iterdir(Path.joinpath(concept_dir, concept["name"])) if x.is_dir()]),
+			"n_concept_images": len([x for x in Path.iterdir(Path.joinpath(concept_dir, concept["name"])) if x.is_file()]),
 			"n_random_images": len([x for x in Path.iterdir(negatives) if x.is_file()]),
 		}
 
@@ -93,7 +105,7 @@ def main():
 		print("Training CAVs...")
 
 		# --- Compute CAVs for generated images ---
-		cavtrainer = CAVtrainer(model, Path.joinpath(base_path,"runs"))
+		cav_trainer = CAVtrainer(model, Path.joinpath(base_path,"runs"))
 
 		concept_acts = extract_activations(
 			model,
@@ -111,7 +123,7 @@ def main():
 
 		# --- Extract CAVs for ground truth images ---
 
-		groundtruth_acts = extract_activations(
+		ground_truth_acts = extract_activations(
 			model,
 			Path.joinpath(base_path, "data", "groundtruth", concept["name"]),
 			layer_name,
@@ -120,8 +132,8 @@ def main():
 
 		# --------------------------------------------
 
-		cav_groundtruth = cavtrainer.train_cav(groundtruth_acts, random_acts, CAVConfig(concept_name=concept["name"], layer_name=layer_name, output_path=str(Path.joinpath(base_path,"runs"))))
-		cav_auto = cavtrainer.train_cav(concept_acts, random_acts, CAVConfig(concept_name=concept["name"], layer_name=layer_name, output_path=str(Path.joinpath(base_path,"runs"))))
+		cav_groundtruth = cav_trainer.train_cav(ground_truth_acts, random_acts, CAVConfig(concept_name=concept["name"], layer_name=layer_name, output_path=str(Path.joinpath(base_path,"runs"))))
+		cav_auto = cav_trainer.train_cav(concept_acts, random_acts, CAVConfig(concept_name=concept["name"], layer_name=layer_name, output_path=str(Path.joinpath(base_path,"runs"))))
 
 		print("Computing similarity scores...")
 		similarity_computer = Similarities(SimilaritiesConfig(method=configs["similarity"]["method"]))
@@ -129,7 +141,7 @@ def main():
 
 		print(similarity_scores)
 
-		# Loggin results -----------------------------
+		# Logging results -----------------------------
 
 		logger.save_numpy(cav_auto, f"{concept['name']}_auto_cav.npy")
 		logger.save_numpy(cav_groundtruth, f"{concept['name']}_gt_cav.npy")

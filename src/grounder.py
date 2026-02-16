@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Optional, Set, Tuple
@@ -91,18 +93,31 @@ class Grounder:
         return results
 
     def run_on_images_in_dir(
-        self,
-        images_dir: Path,
-        text_query: Optional[str] = None,
-        verbose: bool = True,
-    ):
+            self,
+            images_dir: Path,
+            text_query: Optional[str] = None,
+            *,
+            out_json_path: Optional[Path] = None,
+            verbose: bool = True,
+    ) -> Optional[Path]:
+        """
+        Runs GroundingDINO on all supported images under `images_dir`.
+
+        If `out_json_path` is provided, writes a JSON file compatible with cropper.process_folder:
+            relative_path (to images_dir) -> [x1, y1, x2, y2]
+        Stores only the best (highest-score) box per image.
+
+        Returns the JSON path if written, else None.
+        """
         image_files = iter_image_files(images_dir)
         if not image_files:
             print(f"No supported images found in: {images_dir}")
-            return
+            return None
 
         if verbose:
             print(f"Found {len(image_files)} image(s) in {images_dir} | device={self.device}")
+
+        bbox_map: dict[str, list[float]] = {}
 
         for img_path in image_files:
             try:
@@ -113,13 +128,22 @@ class Grounder:
 
             results = self.predict(image, text_query=text_query)
 
-            if verbose:
-                print(f"\n=== {img_path.name} ===")
-                print("Boxes:", int(results["boxes"].shape[0]))
+            best_box = choose_best_box(results)  # (x1,y1,x2,y2) or None
+            if best_box is not None:
+                rel = os.path.relpath(str(img_path), str(images_dir))
+                bbox_map[rel] = [float(best_box[0]), float(best_box[1]), float(best_box[2]), float(best_box[3])]
 
-                for box, score, label in zip(results["boxes"], results["scores"], results["labels"]):
-                    x1, y1, x2, y2 = box.tolist()
-                    print(f"{label} | score={float(score):.3f} | box=({x1:.1f},{y1:.1f},{x2:.1f},{y2:.1f})")
+        if out_json_path is None:
+            return None
+
+        out_json_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(out_json_path, "w", encoding="utf-8") as f:
+            json.dump(bbox_map, f, indent=2)
+
+        if verbose:
+            print(f"Wrote bbox map for {len(bbox_map)}/{len(image_files)} image(s) -> {out_json_path}")
+
+        return out_json_path
 
     # Optional: since you already import cropper utils, here’s a practical helper.
     def save_best_crop(

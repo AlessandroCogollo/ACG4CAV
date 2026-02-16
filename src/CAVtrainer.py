@@ -19,7 +19,7 @@ def compute_cav(concept_acts, random_acts):
     cav_vector = clf.coef_[0]
 
     # Normalizzazione opzionale
-    cav_vector = cav_vector / np.linalg.norm(cav_vector)
+    # cav_vector = cav_vector / np.linalg.norm(cav_vector)
 
     return cav_vector
 
