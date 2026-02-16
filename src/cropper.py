@@ -92,11 +92,11 @@ def bbox_crop(
     img: Image.Image,
     out_size: int,
     bbox_xyxy: Tuple[float, float, float, float],
-    padding: float = 0.1,
+    padding: float = 0.3,
 ) -> Image.Image:
     """
     bbox_xyxy in pixel coordinates (x1,y1,x2,y2).
-    padding expands bbox by a fraction of max(bbox_w,bbox_h), then makes it square.
+    padding restricts bbox by a fraction of max(bbox_w,bbox_h), then makes it square.
     """
     w, h = img.size
     x1, y1, x2, y2 = bbox_xyxy

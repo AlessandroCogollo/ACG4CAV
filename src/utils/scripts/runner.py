@@ -8,8 +8,10 @@ import yaml
 from CAVtrainer import save_cav, compute_cav
 from cropper import Cropper, CropConfig
 from filterer import Filterer, FiltererConfig
+from grounder import Grounder, GrounderConfig
 from similarities import Similarities, SimilaritiesConfig
 from utils.activations import extract_activations
+from utils.logger.logger import ExperimentLogger
 from utils.modelloader import load_hf_timm_model_from_folder
 from CAVtrainer import CAVtrainer, CAVConfig
 
@@ -29,6 +31,8 @@ def main():
 		cache_dir = Path.joinpath(base_path, configs["data"]["cache_dir"])
 		img_dir = Path.joinpath(base_path, configs["data"]["images_dir"])
 		crops_dir = Path.joinpath(base_path, configs["data"]["crops_dir"])
+		concept_dir = Path.joinpath(base_path, "data", "images")
+		negatives = Path.joinpath(base_path, "data", "negatives")
 		model_name = configs["data"]["base_model"]
 
 		# Set fixed seeds for reproducibility
@@ -39,12 +43,20 @@ def main():
 
 		# --------------------------------
 
+		runs_root = Path.joinpath(base_path, "runs")
+		runs_root.mkdir(exist_ok=True)
+
+		logger = ExperimentLogger(runs_root)
+		logger.save_config(Path.joinpath(base_path, "configs", "dev.yaml"))
+
 		with open(Path.joinpath(base_path, configs["data"]["concepts_file"]), 'r') as concepts_file:
 			concepts = yaml.safe_load(concepts_file)
 
-	print("Initializing Base Model")
+	print("Initializing Base Model...")
 
-	#TODO: manage error if model not found, or if metadata file missing, etc.
+	if not Path.joinpath(model_path, model_name).exists():
+		raise FileNotFoundError(f"Model folder not found: {Path.joinpath(model_path, model_name)}")
+
 	makedirs(Path.joinpath(model_path, model_name), exist_ok=True)
 	model = load_hf_timm_model_from_folder(str(Path.joinpath(model_path, model_name)), model_name, device=None)
 
@@ -53,21 +65,28 @@ def main():
 	#	print(name)
 
 	print("Initializing Grounder...\n")
-	# grounder = Grounder(GrounderConfig(model_id=grounder_hf_id, cache_dir=cache_dir), device=device)
+	grounder = Grounder(GrounderConfig(model_id=grounder_hf_id, cache_dir=cache_dir), device=device)
 
-	print("Reading concepts")
+	print("Reading concepts...\n")
 	for concept in concepts["concepts"]:
-		# bboxes = grounder.run_on_images_in_dir(Path.joinpath(img_dir, concept["name"]), concept["name"])
+		bboxes = grounder.run_on_images_in_dir(Path.joinpath(img_dir, concept["name"]), concept["name"])
 
 		if configs["cropping"]["enabled"] is True:
 			print("Cropping images...")
-			# cropper = Cropper(CropConfig(mode=configs["cropping"]["method"], out_size=224), bbox_json=bboxes, saliency_root=None, seed=configs["run"]["seed"])
-			# cropper.process_folder(str(Path.joinpath(img_dir, concept["name"])), str(Path.joinpath(img_dir, "crops", concept["name"])))
+			cropper = Cropper(CropConfig(mode=configs["cropping"]["method"], out_size=224), bbox_json=bboxes, saliency_root=None, seed=configs["run"]["seed"])
+			cropper.process_folder(str(Path.joinpath(img_dir, concept["name"])), str(Path.joinpath(img_dir, "crops", concept["name"])))
 
 		if configs["filtering"]["enabled"] is True:
 			print("Filtering images...")
 			filterer = Filterer(FiltererConfig(method=configs["filtering"]["method"]))
 			filterer.process_folder(str(Path.joinpath(img_dir, "crops", concept["name"])), str(Path.joinpath(img_dir, "filtered", concept["name"])))
+
+		dataset_stats = {
+			"n_concept_images": len([x for x in Path.iterdir(Path.joinpath(concept_dir, concept["name"])) if x.is_dir()]),
+			"n_random_images": len([x for x in Path.iterdir(negatives) if x.is_file()]),
+		}
+
+		logger.log_dataset_stats(concept["name"], dataset_stats)
 
 		layer_name = configs["data"]["layer_name"]
 
@@ -109,6 +128,21 @@ def main():
 		similarity_scores = similarity_computer.compute_similarity_scores(cav_groundtruth, cav_auto)
 
 		print(similarity_scores)
+
+		# Loggin results -----------------------------
+
+		logger.save_numpy(cav_auto, f"{concept['name']}_auto_cav.npy")
+		logger.save_numpy(cav_groundtruth, f"{concept['name']}_gt_cav.npy")
+
+		metrics = {
+			"cosine_similarity": float(similarity_scores),
+			"n_concept_samples": int(len(concept_acts)),
+			"n_random_samples": int(len(random_acts))
+		}
+
+		logger.log_metrics(concept["name"], metrics)
+
+		# --------------------------------------------
 
 if __name__ == "__main__":
 	main()

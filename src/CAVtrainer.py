@@ -48,5 +48,5 @@ class CAVtrainer:
 
     def train_cav(self, concept_acts, random_acts, config: CAVConfig):
         cav_vector = compute_cav(concept_acts, random_acts)
-        save_cav(cav_vector, config.concept_name, config.layer_name, self.output_path)
+        # save_cav(cav_vector, config.concept_name, config.layer_name, self.output_path)
         return cav_vector

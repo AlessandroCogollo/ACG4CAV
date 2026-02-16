@@ -19,7 +19,7 @@ grounding:
   topk_per_image: 3
 
 cropping:
-  enabled: false
+  enabled: true
   method: bbox
   padding_ratio: 0.10
 
