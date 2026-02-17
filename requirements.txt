@@ -13,3 +13,9 @@ torchvision~=0.25.0
 
 sympy~=1.14.0
 scikit-learn~=1.8.0
+
+opencv-python
+
+plotly
+
+matplotlib

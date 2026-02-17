@@ -14,7 +14,7 @@ data:
 grounding:
   model: groundingdino
   hf_model_id: "IDEA-Research/grounding-dino-tiny"
-  box_threshold: 0.30
+  box_threshold: 0.25
   text_threshold: 0.25
   topk_per_image: 3
 

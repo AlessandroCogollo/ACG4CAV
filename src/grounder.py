@@ -8,7 +8,7 @@ from typing import Optional, Set, Tuple
 
 import torch
 from PIL import Image
-from transformers import AutoProcessor, GroundingDinoForObjectDetection
+from transformers import AutoProcessor, GroundingDinoForObjectDetection, AutoModelForZeroShotObjectDetection
 
 from cropper import crop_image, CropConfig, center_crop
 
@@ -62,12 +62,12 @@ class Grounder:
 
         if self.cfg.model_id == "IDEA-Research/grounding-dino-tiny":
             print("Using tiny model")
-            self.model = GroundingDinoForObjectDetection.from_pretrained(
+            self.model =    AutoModelForZeroShotObjectDetection.from_pretrained(
                 self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
             ).to(self.device)
         elif self.cfg.model_id == "IDEA-Research/grounding-dino-base":
             print("Using base model")
-            self.model = GroundingDinoForObjectDetection.from_pretrained(
+            self.model = AutoModelForZeroShotObjectDetection.from_pretrained(
                 self.cfg.model_id, cache_dir=str(self.cfg.cache_dir)
             ).to(self.device)
         else:
@@ -90,6 +90,8 @@ class Grounder:
             text_threshold=self.cfg.text_threshold,
             target_sizes=[image.size[::-1]],  # (h, w)
         )[0]
+
+        print(results)
         return results
 
     def run_on_images_in_dir(

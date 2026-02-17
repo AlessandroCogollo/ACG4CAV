@@ -254,11 +254,13 @@ def process_folder(
         if cfg.mode.lower() == "bbox":
             if rel not in bbox_map:
                 # fallback center if bbox missing
-                cropped = center_crop(img, cfg.out_size)
+                pass
+                # OPTIONALLY: cropped = center_crop(img, cfg.out_size)
             else:
                 bb = bbox_map[rel]
                 bbox = (float(bb[0]), float(bb[1]), float(bb[2]), float(bb[3]))
                 cropped = crop_image(img, cfg, bbox_xyxy=bbox, seed=seed)
+                cropped.save(out_path)
         elif cfg.mode.lower() == "saliency":
             if not saliency_root:
                 cropped = center_crop(img, cfg.out_size)
@@ -269,11 +271,10 @@ def process_folder(
                 else:
                     sal = Image.open(sal_path)
                     cropped = crop_image(img, cfg, saliency_img=sal, seed=seed)
+            cropped.save(out_path)
         else:
             cropped = crop_image(img, cfg, seed=seed)
-
-        # keep same extension; safe for jpg/png/webp
-        cropped.save(out_path)
+            cropped.save(out_path)
 
 @dataclass
 class CropperConfig:
