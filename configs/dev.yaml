@@ -18,9 +18,13 @@ grounding:
   text_threshold: 0.25
   topk_per_image: 3
 
+sam:
+  model: samvitbase
+  hf_model_id: "facebook/sam-vit-base"
+
 cropping:
   enabled: true
-  method: bbox
+  method: grounder_mask_or_box
   padding_ratio: 0.10
 
 filtering:
